@@ -148,8 +148,61 @@ def weighted_average_change(df):
     st.subheader('Average Change in Responses')
     st.pyplot(fig)
 
+def scoring_overtime(scoring_df):
+    # Set the window size for smoothing
+    window_size = 50
+
+    # Create a figure and axis object
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Iterate over each category in 'Question Type (Outcomes)'
+    for category, data in scoring_df.groupby('Question Type (Outcomes)'):
+        # Smooth the 'Response (Outcomes)' column using a rolling window for each category
+        data['Smoothed Response'] = data['Response (Outcomes)'].rolling(window=window_size, min_periods=window_size//2).mean()
+        
+        # Plot the smoothed line for each category
+        sns.lineplot(data=data, x='Session Date (Outcomes)', y='Smoothed Response', ax=ax, label=category)
+
+    # Set labels and title
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Response')
+    ax.set_title('Trend of Response Over Time')
+
+    # Add legend
+    ax.legend()
+
+    st.header('Trend of Average Response Over Time')
+    st.pyplot(fig)
+
+def agent_performance(scoring_df):
+    # Group the DataFrame by 'Session Delivered By' and calculate the number of responses and mean response
+    agent_stats = scoring_df.groupby('Session Delivered By (Outcomes)').agg(
+        num_responses=('Response (Outcomes)', 'count'),
+        avg_response=('Response (Outcomes)', 'mean')
+    ).reset_index()
+
+    # Create a figure and axis object
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Create a scatter plot
+    scatter = ax.scatter(agent_stats['num_responses'], agent_stats['avg_response'])
+
+    # Add labels for each agent
+    for i, row in agent_stats.iterrows():
+        ax.annotate(row['Session Delivered By (Outcomes)'], (row['num_responses'], row['avg_response']))
+
+    # Set labels and title
+    ax.set_xlabel('Number of Responses')
+    ax.set_ylabel('Average Response')
+    ax.set_title('Agent Performance')
+
+    st.header('Agent Performance')
+    st.pyplot(fig)
+
 def analyse(scoring_df):
     percent_answer_statisfaction(scoring_df)
     percent_answer_circumstance(scoring_df)
     percent_answer_goal(scoring_df)
     weighted_average_change(scoring_df)
+    scoring_overtime(scoring_df)
+    agent_performance(scoring_df)
