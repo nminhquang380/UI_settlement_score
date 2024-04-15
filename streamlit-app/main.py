@@ -11,10 +11,13 @@ import eda
 
 def main():
     st.title("Data Analysis Application")
-
-    uploaded_file = st.file_uploader("Upload CSV File", type="csv")
-
-    if uploaded_file is not None:
+    
+    try:
+        uploaded_file = st.file_uploader("Upload CSV File", type="csv")
+    except:
+        st.warning("Unable to open the file")
+    
+    if uploaded_file:
         # Read the dataset 
         data = pd.read_csv(uploaded_file)
 
@@ -25,12 +28,20 @@ def main():
         st.subheader("Preprocessed Data Preview")
         st.dataframe(preprocessed_data)
 
+        list_agent = preprocessed_data['Session Delivered By (Outcomes)'].unique()
+        agent = st.selectbox(label='Agent', options=list_agent)
+        
+        start_date = st.date_input('Starting Date')
+        end_date = st.date_input('Ending Date')
+        
         if st.button("Analyse Data"):
-
             # Calculate statistics
+            try:
+                analysed_date = preprocessed_data[preprocessed_data["Session Delivered By (Outcomes)"] == agent]
+                analysed_date = analysed_date[(analysed_date['Session Date (Outcomes)'] >= start_date) & (analysed_date['Session Date (Outcomes)'] <= end_date)]
+            except:
+                pass
             eda.analyse(preprocessed_data)
-    else:
-        st.warning("Unable to open the file")
 
 if __name__ == "__main__":
     main()
