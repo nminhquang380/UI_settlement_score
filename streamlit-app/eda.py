@@ -14,8 +14,13 @@ def percent_answer_satisfaction(scoring_df):
 
         # Aggregate answers if there are duplicates for the same client and question
         satisfaction_df_grouped = satisfaction_df.groupby(['Client ID (Clients)', 'Question (Outcomes)'])['Response (Outcomes)'].first().unstack()
-        satisfaction_df_grouped['I am happy/satisfied with the services I have received'] = satisfaction_df_grouped['I am happy with the services I have received'].fillna(satisfaction_df_grouped['I am satisfied with the services I have received'])
-        satisfaction_df_grouped.drop(columns=['I am happy with the services I have received', 'I am satisfied with the services I have received'], inplace=True)
+        
+        # Group up 2 questions
+        try:
+            satisfaction_df_grouped['I am happy/satisfied with the services I have received'] = satisfaction_df_grouped['I am happy with the services I have received'].fillna(satisfaction_df_grouped['I am satisfied with the services I have received'])
+            satisfaction_df_grouped.drop(columns=['I am happy with the services I have received', 'I am satisfied with the services I have received'], inplace=True)
+        except:
+            pass
         # Check if each client has answered all questions
         answered_all = satisfaction_df_grouped.notna().all(axis=1).sum()
         number_client = scoring_df['Client ID (Clients)'].nunique()
@@ -232,7 +237,7 @@ def agent_performance(scoring_df):
     except:
         pass
     
-def response_distribution():
+def response_distribution(df):
     try:
         # Assuming df is your DataFrame containing the data
         # Sort the DataFrame by Client ID, session ID, and question
@@ -248,16 +253,19 @@ def response_distribution():
         # Create a figure and axes to plot the distributions
         fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 12))
 
+        # Define the bin edges for the histograms
+        bins = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5]  # Specify bins for integer responses from 1 to 5
+
         # Group data by question type
         grouped_data = first_last_answers.groupby('Question Type (Outcomes)')
 
         # Loop through each question type group
         for (question_type, data), ax in zip(grouped_data, axes):
             # Plot histogram of first_answer distribution
-            sns.histplot(data['first_answer'], kde=True, ax=ax, label='First Answer', color='blue', alpha=0.6)
+            sns.histplot(data['first_answer'], bins=bins, kde=False, ax=ax, label='First Answer', color='blue', alpha=0.6)
             
             # Plot histogram of last_answer distribution
-            sns.histplot(data['last_answer'], kde=True, ax=ax, label='Last Answer', color='red', alpha=0.6)
+            sns.histplot(data['last_answer'], bins=bins, kde=False, ax=ax, label='Last Answer', color='red', alpha=0.6)
             
             # Set title for each plot
             ax.set_title(f'Distribution of First and Last Answers for {question_type}')
@@ -265,9 +273,12 @@ def response_distribution():
             # Add legend to the plot
             ax.legend()
             
+            # Set x-ticks from 1 to 5
+            ax.set_xticks([1, 2, 3, 4, 5])
+    
             # Add labels to the axes
-            ax.set_xlabel('Answer')
-            ax.set_ylabel('Density')
+            ax.set_xlabel('Response (1-5)')
+            ax.set_ylabel('Count')
 
         st.header('Distribution of First and Last Answers')
         st.pyplot(fig)

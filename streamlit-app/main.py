@@ -45,7 +45,8 @@ def main():
             
             specific_analysis = ['Weighted average change of Response',
                                  'Trend of Response Over Time',
-                                 'Agent Performance']
+                                 'Agent Performance',
+                                 'Compare Distribution of First and Last Responses']
             
             analysis_options = st.multiselect(label='Analysis', options=specific_analysis)
         
@@ -71,10 +72,14 @@ def main():
                     
                 if 'Agent Performance' in analysis_options:
                     eda.agent_performance(analysed_data)
+                    
+                if 'Compare Distribution of First and Last Responses' in analysis_options:
+                    eda.response_distribution(analysed_data)
             else:
                 eda.weighted_average_change(analysed_data)
                 eda.scoring_overtime(analysed_data)
                 eda.agent_performance(analysed_data)
+                eda.response_distribution(analysed_data)
 
                 
 
