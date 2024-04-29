@@ -145,7 +145,15 @@ def weighted_average_change(df):
 
         average_change_df = average_change.reset_index()
         average_change_df = average_change_df[average_change_df['Question Type (Outcomes)'].isin(['SCORE: Goals', 'SCORE: Circumstances'])]
+        
+        csv_file = convert_df(average_change_df)
         st.dataframe(average_change_df)
+        st.download_button(
+            label="Download CSV",
+            data=csv_file,
+            file_name="average_change.csv",
+            mime="text/csv"
+        )
 
         # Create a figure and axis object
         fig, ax = plt.subplots(figsize=(12, 10))
@@ -195,50 +203,6 @@ def scoring_overtime(scoring_df):
     except:
         pass
 
-def first_last_scoring_overtime(df):
-    # Assuming df is your DataFrame containing the data
-    # Sort the DataFrame by Client ID, session ID, and question
-    df.sort_values(by=['Client ID (Clients)', 'Session ID (Outcomes)', 'Question (Outcomes)'], inplace=True)
-
-    # Group by Client ID and question, then aggregate to get the first and last answer
-    first_last_answers = df.groupby(['Client ID (Clients)', 'Question Type (Outcomes)', 'Question (Outcomes)']).agg(first_answer=('Response (Outcomes)', 'first'), last_answer=('Response (Outcomes)', 'last')).reset_index()
-
-    # Drop rows where answers are NaN
-    first_last_answers.dropna(axis=0, inplace=True)
-    
-    # Set the window size for smoothing
-    window_size = 50
-
-    # Create a figure and axis object
-    fig, ax = plt.subplots(figsize=(12, 8))
-
-    # Iterate over each category in 'Question Type (Outcomes)'
-    for category, data in first_last_answers.groupby('Question Type (Outcomes)'):
-        if category == 'SCORE: Satisfaction':
-            # Smooth the 'Response (Outcomes)' column using a rolling window for each category
-            data['Smoothed Response'] = data['Response (Outcomes)'].rolling(window=window_size, min_periods=window_size//2).mean()
-            
-            # Plot the smoothed line for each category
-            sns.lineplot(data=data, x='Session Date (Outcomes)', y='Smoothed Response', ax=ax, label=category)
-        elif category != 'Client SCORE':
-            data['Smoothed First Response'] = data['first_answer'].rolling(window=window_size, min_periods=window_size//2).mean()
-            first_label = 'First ' + category
-            sns.lineplot(data=data, x='Session Date (Outcomes)', y='Smoothed First Response', ax=ax, label=first_label)
-            
-            data['Smoothed Last Response'] = data['last_answer'].rolling(window=window_size, min_periods=window_size//2).mean()
-            last_label = 'Last ' + category
-            sns.lineplot(data=data, x='Session Date (Outcomes)', y='Smoothed Last Response', ax=ax, label=last_label)
-            
-    # Set labels and title
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Response')
-    ax.set_title('Trend of Response Over Time')
-
-    # Add legend
-    ax.legend()
-
-    st.header('Trend of Average Response Over Time')
-    st.pyplot(fig)
     
 def agent_performance(scoring_df):
     try:
@@ -267,6 +231,52 @@ def agent_performance(scoring_df):
         st.pyplot(fig)
     except:
         pass
+    
+def response_distribution():
+    try:
+        # Assuming df is your DataFrame containing the data
+        # Sort the DataFrame by Client ID, session ID, and question
+        df.sort_values(by=['Client ID (Clients)', 'Session ID (Outcomes)', 'Question (Outcomes)'], inplace=True)
+
+        # Group by Client ID and question, then aggregate to get the first and last answer
+        first_last_answers = df.groupby(['Client ID (Clients)', 'Question Type (Outcomes)', 'Question (Outcomes)']).agg(first_answer=('Response (Outcomes)', 'first'), last_answer=('Response (Outcomes)', 'last')).reset_index()
+
+        # Drop rows where answers are NaN
+        first_last_answers.dropna(axis=0, inplace=True)
+        first_last_answers = first_last_answers[first_last_answers['Question Type (Outcomes)'].isin(['SCORE: Goals', 'SCORE: Circumstances'])]
+        
+        # Create a figure and axes to plot the distributions
+        fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 12))
+
+        # Group data by question type
+        grouped_data = first_last_answers.groupby('Question Type (Outcomes)')
+
+        # Loop through each question type group
+        for (question_type, data), ax in zip(grouped_data, axes):
+            # Plot histogram of first_answer distribution
+            sns.histplot(data['first_answer'], kde=True, ax=ax, label='First Answer', color='blue', alpha=0.6)
+            
+            # Plot histogram of last_answer distribution
+            sns.histplot(data['last_answer'], kde=True, ax=ax, label='Last Answer', color='red', alpha=0.6)
+            
+            # Set title for each plot
+            ax.set_title(f'Distribution of First and Last Answers for {question_type}')
+            
+            # Add legend to the plot
+            ax.legend()
+            
+            # Add labels to the axes
+            ax.set_xlabel('Answer')
+            ax.set_ylabel('Density')
+
+        st.header('Distribution of First and Last Answers')
+        st.pyplot(fig)
+    except:
+        pass
+        
+@st.cache_data
+def convert_df(df):
+    return df.to_csv().encode('utf-8')
 
 def analyse(scoring_df):
     satisfaction_num, satisfaction_percent = percent_answer_satisfaction(scoring_df)
@@ -276,10 +286,21 @@ def analyse(scoring_df):
     result_dict = {'Clients': ['clients who had all three questions under SCORE: Satisfaction', 'clients who had two responses for at least one question under SCORE: Circumstances', 'clients who had two responses for at least one question under SCORE: Goals '],
         'Number': [satisfaction_num, circum_num, goal_num],
         'Percent': [satisfaction_percent, circum_percent, goal_percent]}
+    st.header('Result')
     result_df = pd.DataFrame(result_dict)
+    
+    csv_file = convert_df(result_df)
+    
     st.dataframe(result_df)
+    
+    st.download_button(
+        label="Download CSV",
+        data=csv_file,
+        file_name="result.csv",
+        mime="text/csv"
+    )
 
-    weighted_average_change(scoring_df)
-    # first_last_scoring_overtime(scoring_df)
-    scoring_overtime(scoring_df)
-    agent_performance(scoring_df)
+
+    # weighted_average_change(scoring_df)
+    # scoring_overtime(scoring_df)
+    # agent_performance(scoring_df)
